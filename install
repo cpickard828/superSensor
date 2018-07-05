@@ -1,0 +1,12 @@
+#!/bin/sh
+
+sudo apt-get update -y
+
+sudo apt-get install vim-runtime -y
+sudo apt-get install vim -y
+
+sudo apt-get install python-scipy -y
+
+sudo apt-get install python-matplotlib -y
+
+sudo echo "pcm.!default { type asym playback.pcm { type plug slave.pcm "hw:0" } capture.pcm { type plug slave.pcm "hw :1" } }" > ~/.asoundrc
