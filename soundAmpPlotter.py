@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import json
 import sys
 if len(sys.argv) != 2:
-    print "Error: wrong number of command line arguments"
-    print "Usage: python tempPlotter.py foo.json"
+    print "Error: too few command line arguments"
+    print "Usage: python tempPlotter.py foo.json (graph.png)"
     sys.exit(1)
 
 with open(sys.argv[1]) as json_data:
@@ -35,4 +35,7 @@ plt.ylabel('Digital Amplitude')
 plt.title('Digital Amplitude over Time')
 plt.legend()
 #plt.show()
-plt.savefig("/home/pi/graphs/soundAmp.png")
+if len(sys.argv)==2:
+    plt.savefig("/home/pi/graphs/soundAmp.png")
+else:
+    plt.savefig("/home/pi/graphs/" + sys.argv[2])

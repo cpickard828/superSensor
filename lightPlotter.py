@@ -2,9 +2,9 @@ import sys
 import matplotlib.pyplot as plt
 import json
 
-if len(sys.argv)  != 2:
-    print "Error: wrong number of command line arguments"
-    print "Usage: python tempPlotter.py foo.json"
+if len(sys.argv)  < 2:
+    print "Error: too few command line arguments"
+    print "Usage: python tempPlotter.py foo.json (graph.png)"
     sys.exit(1)
 
 with open(sys.argv[1]) as json_data:
@@ -26,4 +26,7 @@ plt.xlabel("Time (seconds)")
 plt.ylabel("Lux")
 plt.title("Lux Readings over Time")
 #plt.show()
-plt.savefig("/home/pi/graphs/light.png")
+if len(sys.argv) == 2:
+    plt.savefig("/home/pi/graphs/light.png")
+else:
+    plt.savefig("/home/pi/graphs/" + sys.argv[2])
