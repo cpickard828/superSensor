@@ -13,4 +13,8 @@ sudo apt-get install python-matplotlib -y
 
 pip install wifi
 
+sudo apt-get install python-bluez -y
+
+sudo pip install python-wifi
+
 sudo echo "pcm.!default { type asym playback.pcm { type plug slave.pcm "hw:0" } capture.pcm { type plug slave.pcm "hw:1" } }" > ~/.asoundrc
