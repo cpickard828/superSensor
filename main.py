@@ -7,9 +7,19 @@ from sense_hat import SenseHat
 import json
 import io
 import smbus
-from vad import VoiceActivityDetector 
+from vad import VoiceActivityDetector
+import os
+import logging
+
+logging.basicConfig(filename="/home/pi/superSensor/error.log")
+logging.debug('debug')
+logging.info('info')
+logging.warning('warning')
+logging.error('error')
+logging.critical('critical')
+dir_path = "/home/pi/superSensor"
 # PROGRAM VARIABLES
-timeRun = 180#172800 # number of seconds to run program (86400 = 1 Day)
+timeRun = 300 #172800 # number of seconds to run program (86400 = 1 Day)
 numRecordings = 5 # number of audio records
 lengthRecording = 5 # length of each recording in seconds
 frequencyTempReadings = 5 # seconds
@@ -23,12 +33,15 @@ foNum = 0
 timeStart = 0
 timeEnd = 0
 q = Queue.Queue()
+qSoundJson = Queue.Queue()
 goingFlag = True
-soundName = "/home/pi/superSensor/sound.json"
-tempName = "/home/pi/superSensor/temp.json"
-lightName = "/home/pi/superSensor/light.json"
-movementName = "/home/pi/superSensor/movement.json"
+soundName = dir_path + "/sound.json"
+tempName = dir_path + "/temp.json"
+lightName = dir_path + "/light.json"
+movementName = dir_path + "/movement.json"
 foundMean = False
+startSeconds = 0
+#currDay = 1
 
 # 2 digit display code from yaab-arduino.blogspot.com
 
@@ -104,12 +117,15 @@ class createWAV(threading.Thread):
         #for x in range(numRecordings):
         while totalTime < timeRun:
 
-            my_file = "/home/pi/superSensor/talking" + `audioNum` + ".wav"   
+            my_file = dir_path + "/talking" + `audioNum` + ".wav"   
             print my_file
             currTime = time.time()
             totalTime = currTime - timeStart
             totalTime = round(totalTime, 2)
             q.put(totalTime)
+            currDay = int(((totalTime + startSeconds) / 86400) + 1)
+
+            qSoundJson.put(currDay)
             #q.put(time.time() - timeStart)
 
 
@@ -118,7 +134,7 @@ class createWAV(threading.Thread):
             try:
                 subprocess.check_output(['arecord',durLabel, my_file])
             except subprocess.CalledProcessError as e:
-                print e.output
+                logging.exception("message")
 
             audioNum = audioNum + 1
             #print subprocess.check_output(['ls'])
@@ -134,6 +150,8 @@ class processWAV(threading.Thread):
         global processNum
          
         megaArray = []
+        currDay = 1
+        fileChar = "A"
         #while processNum < numRecordings:
         while goingFlag == True or processNum < audioNum:
             while processNum >= audioNum:
@@ -142,11 +160,20 @@ class processWAV(threading.Thread):
             if processNum > 0:
                 subprocess.check_output(['rm', wavFile])
             #jsonFile = "/home/pi/results" + `processNum` + ".json"
-            wavFile = "/home/pi/superSensor/talking" + `processNum` + ".wav"
+            wavFile = dir_path + "/talking" + `processNum` + ".wav"
             print "Processing " + wavFile
-            foFile = "fo" + `processNum` + ".fo"
-            pmFile = "pm" + `processNum` + ".pm"
+            #foFile = "fo" + `processNum` + ".fo"
+            #pmFile = "pm" + `processNum` + ".pm"
             timeEnd = q.get()
+            tempDay = currDay
+            currDay = qSoundJson.get()
+            if tempDay != currDay:
+                megaArray = []
+            soundName = dir_path + "/data/day" + str(currDay) + "/" + fileChar + "/sound" + str(fileNum) + ".json"
+            if fileChar == "A":
+                fileChar = "B"
+            else:
+                fileChar = "A"
             print timeEnd
             #print subprocess.check_output(['python', '/home/pi/detectVoiceInWav.py', wavFile, jsonFile, str(timeEnd)])
             v = VoiceActivityDetector(wavFile)
@@ -197,11 +224,25 @@ class tempTaking(threading.Thread):
         global sense
         num = 0
         tempData = []
+        currDay = 1
+        fileChar = "A"
         while goingFlag:
+
+            temp = sense.get_temperature()
             currTime = time.time()
             totalTime = currTime - timeStart
             totalTime = round(totalTime, 3)
-            temp = sense.get_temperature()
+            tempDay = currDay
+            currDay = int(((totalTime + startSeconds) / 86400) + 1)
+            if tempDay != currDay:
+                tempData = []
+            tempName = dir_path + "/data/day" + str(currDay) + "/" + fileChar + "/temp" + str(fileNum) + ".json"
+
+            if fileChar == "A":
+                fileChar = "B"
+            else:
+                fileChar = "A"
+
             f = open("/sys/class/thermal/thermal_zone0/temp", "r")
             t = f.readline()
             t = float(int(t))/1000
@@ -239,19 +280,29 @@ class movementDetector(threading.Thread):
         xList = []
         yList = []
         zList = []
-
+        fileChar = "A"
         movData = []
         movLabel = {}
         finalStable = False
         gap = False
         numMisses = 0
-        
+        currDay = 1
         print "Calibrating..."
         #sense.clear((255, 0, 0))
         while goingFlag:
             currTime = time.time()
             totalTime = currTime - timeStart
             totalTime = round(totalTime, 3)
+            tempDay = currDay
+            currDay = int(((totalTime + startSeconds) / 86400) + 1)
+            if tempDay != currDay:
+                movData = []
+            movementName = dir_path + "/data/day" + str(currDay) + "/" + fileChar + "/movement" + str(fileNum) + ".json"
+            if fileChar == "A":
+                fileChar = "B"
+            else:
+                fileChar = "A"
+
             acceleration = sense.get_accelerometer_raw()
             x = acceleration['x']
             y = acceleration['y']
@@ -334,7 +385,8 @@ class lightSensor(threading.Thread):
     def run(self):
         global goingFlag
         global timeStart
-
+        currDay = 1
+        fileChar = "A"
         try:
             bus = smbus.SMBus(1)
             lightData = []
@@ -345,6 +397,16 @@ class lightSensor(threading.Thread):
                 currTime = time.time()
                 totalTime = currTime - timeStart
                 totalTime = round(totalTime, 2)
+                tempDay = currDay
+                currDay = int (((totalTime + startSeconds) / 86400) + 1)
+                if currDay != tempDay:
+                    lightData = []
+                lightName = dir_path + "/data/day" + str(currDay) + "/" + fileChar + "/light" + str(fileNum) + ".json"
+
+                if fileChar == "A":
+                    fileChar = "B"
+                else:
+                    fileChar = "A"
                 data = bus.read_i2c_block_data(0x39, 0x0C | 0x80, 2)
                 data1 = bus.read_i2c_block_data(0x39, 0x0E | 0x80, 2)
 
@@ -368,7 +430,7 @@ class lightSensor(threading.Thread):
             sense.show_letter("X", text_colour=[255,0,0])# back_colour=[0,255,0])
             sys.exit(1)
 #sense.show_message("Prepare for instruction...", text_colour=(255, 0, 0), back_colour=(0,0,0))
-
+print dir_path
 try:
 
     cat = smbus.SMBus(1)
@@ -510,18 +572,27 @@ sense.clear()
 timeStart = time.time()
 print "\nMonth: " + str(monthNum) + "  Day: " + str(dayNum) + "  Time: " + str(hourNum) + ":" + str(minNum)
 
+startSeconds = hourNum * 3600
+startSeconds = startSeconds + (minNum * 60)
+print "Total seconds: " + str(startSeconds)
+
 fileNum = 0
-if os.path.isfile("/home/pi/superSensor/light.json"):
+if os.path.isfile(dir_path + "/data/day1/light0.json"):
     exists = True
     while exists:
         fileNum = fileNum + 1
-        pathName = "/home/pi/superSensor/light" + str(fileNum) + ".json"
+        pathName = dir_path + "/data/day1/light" + str(fileNum) + ".json"
         exists = os.path.isfile(pathName)
 
-    soundName = "/home/pi/superSensor/sound" + str(fileNum) + ".json"
-    tempName = "/home/pi/superSensor/temp" + str(fileNum) + ".json"
-    lightName = "/home/pi/superSensor/light" + str(fileNum) + ".json"
-    movementName = "/home/pi/superSensor/movement" + str(fileNum) + ".json"
+    #soundName = dir_path + "/sound" + str(fileNum) + ".json"
+    #tempName = dir_path + "/temp" + str(fileNum) + ".json"
+    #lightName = dir_path + "/light" + str(fileNum) + ".json"
+    #movementName = dir_path + "/movement" + str(fileNum) + ".json"
+
+    soundName = dir_path + "/data/day1/sound" + str(fileNum) + ".json"
+    tempName = dir_path + "/data/day1/temp" + str(fileNum) + ".json"
+    lightName = dir_path + "/data/day1/light" + str(fileNum) + ".json"
+    movementName = dir_path + "/data/day1/movement" + str(fileNum) + ".json"
     print lightName
     
 timeArray = []
@@ -532,9 +603,9 @@ timeLabel["hour"] = hourNum
 timeLabel["min"] = minNum
 timeArray.append(timeLabel)
 if fileNum == 0:
-    timeName = "/home/pi/superSensor/time.json"
+    timeName = dir_path + "/data/time0.json"
 else:
-    timeName = "/home/pi/superSensor/time" + str(fileNum) + ".json"
+    timeName = dir_path + "/data/time" + str(fileNum) + ".json"
 save_to_file(timeArray, timeName)
 
 t1 = createWAV()
