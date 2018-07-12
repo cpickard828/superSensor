@@ -17,4 +17,6 @@ sudo apt-get install python-bluez -y
 
 sudo pip install python-wifi
 
+sudo pip install access_points
+
 sudo echo "pcm.!default { type asym playback.pcm { type plug slave.pcm "hw:0" } capture.pcm { type plug slave.pcm "hw:1" } }" > ~/.asoundrc

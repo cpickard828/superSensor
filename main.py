@@ -136,6 +136,7 @@ class createWAV(threading.Thread):
             except subprocess.CalledProcessError as e:
                 logging.exception("message")
 
+                sense.set_pixel(7, 7, [0,0,255])
             audioNum = audioNum + 1
             #print subprocess.check_output(['ls'])
             #while os.path.exists(my_file) == False:
@@ -353,7 +354,7 @@ class movementDetector(threading.Thread):
                 print "X: " + str(meanX)
                 print "Y: " + str(meanY)
             if foundMean:
-                if x >= meanX + 0.003 or x <= meanX -0.003: #or y>= meanY + 0.009 or y <= meanY - 0.009:
+                if x >= meanX + 0.006 or x <= meanX -0.006: #or y>= meanY + 0.009 or y <= meanY - 0.009:
                     if gap == False:
                         movLabel = {}
                         print "^^^^^^^^^^^^^^^^^^^^^^^"
@@ -577,11 +578,11 @@ startSeconds = startSeconds + (minNum * 60)
 print "Total seconds: " + str(startSeconds)
 
 fileNum = 0
-if os.path.isfile(dir_path + "/data/day1/light0.json"):
+if os.path.isfile(dir_path + "/data/day1/A/light0.json"):
     exists = True
     while exists:
         fileNum = fileNum + 1
-        pathName = dir_path + "/data/day1/light" + str(fileNum) + ".json"
+        pathName = dir_path + "/data/day1/A/light" + str(fileNum) + ".json"
         exists = os.path.isfile(pathName)
 
     #soundName = dir_path + "/sound" + str(fileNum) + ".json"

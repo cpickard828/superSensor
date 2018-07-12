@@ -1,7 +1,7 @@
 import matplotlib.pyplot as plt
 import json
 import sys
-if len(sys.argv) != 2:
+if len(sys.argv) < 2:
     print "Error: too few command line arguments"
     print "Usage: python tempPlotter.py foo.json (graph.png)"
     sys.exit(1)
