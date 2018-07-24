@@ -11,6 +11,9 @@ from vad import VoiceActivityDetector
 import os
 import logging
 import numpy as np
+from access_points import get_scanner
+from bluetooth import *
+
 logging.basicConfig(filename="/home/pi/superSensor/error.log")
 logging.debug('debug')
 logging.info('info')
@@ -135,6 +138,7 @@ class createWAV(threading.Thread):
                 subprocess.check_output(['arecord',durLabel, my_file])
             except subprocess.CalledProcessError as e:
                 logging.exception("message")
+                audioNum = audioNum - 1
 
                 sense.set_pixel(7, 7, [0,0,255])
             audioNum = audioNum + 1
@@ -467,6 +471,19 @@ class lightSensor(threading.Thread):
 
             sense.show_letter("X", text_colour=[255,0,0])# back_colour=[0,255,0])
             sys.exit(1)
+
+
+class wirelessScan(threading.Thread):
+    def run(self):
+        #Wifi
+        wifi_scanner = get_scanner()
+        wifiInfo = wifi_scanner.get_access_points()
+        print wifiInfo
+        for x in range(0, len(wifiInfo)):
+            print wifiInfo[x]["bssid"]
+        
+        #Bluetooth
+        nearby_devices = discover_devices()
 #sense.show_message("Prepare for instruction...", text_colour=(255, 0, 0), back_colour=(0,0,0))
 print dir_path
 try:
@@ -651,13 +668,14 @@ t2 = processWAV()
 t3 = tempTaking()
 t4 = movementDetector()
 t5 = lightSensor()
+t6 = wirelessScan()
 
 t1.start()
 t2.start()
 t3.start()
 t4.start()
 t5.start()
-
+t6.start()
 
 for event in sense.stick.get_events():
     print ""
