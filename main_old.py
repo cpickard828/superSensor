@@ -10,9 +10,6 @@ import smbus
 from vad import VoiceActivityDetector
 import os
 import logging
-import numpy as np
-from access_points import get_scanner
-from bluetooth import *
 
 logging.basicConfig(filename="/home/pi/superSensor/error.log")
 logging.debug('debug')
@@ -21,11 +18,8 @@ logging.warning('warning')
 logging.error('error')
 logging.critical('critical')
 dir_path = "/home/pi/superSensor"
-# Byte tracking
-bytesLeftStart = 0
-bytesLeftEnd = 0
 # PROGRAM VARIABLES
-timeRun = 86400 #172800 # number of seconds to run program (86400 = 1 Day)
+timeRun = 43200 #172800 # number of seconds to run program (86400 = 1 Day)
 numRecordings = 5 # number of audio records
 lengthRecording = 5 # length of each recording in seconds
 frequencyTempReadings = 5 # seconds
@@ -141,7 +135,6 @@ class createWAV(threading.Thread):
                 subprocess.check_output(['arecord',durLabel, my_file])
             except subprocess.CalledProcessError as e:
                 logging.exception("message")
-                audioNum = audioNum - 1
 
                 sense.set_pixel(7, 7, [0,0,255])
             audioNum = audioNum + 1
@@ -160,7 +153,6 @@ class processWAV(threading.Thread):
         megaArray = []
         currDay = 1
         fileChar = "A"
-        wavFile = ""
         #while processNum < numRecordings:
         while goingFlag == True or processNum < audioNum:
             while processNum >= audioNum:
@@ -187,29 +179,8 @@ class processWAV(threading.Thread):
                 print timeEnd
                 #print subprocess.check_output(['python', '/home/pi/detectVoiceInWav.py', wavFile, jsonFile, str(timeEnd)])
                 v = VoiceActivityDetector(wavFile)
-                ampData = v._calculate_amplitude(v.data)
-
-                if np.percentile(ampData, 75) < 200: 
-                    print "AUTO"
-                    speech_labels = []
-                    speech_dict = {}
-                    speech_dict['percent_time_w_speech'] = 0.0
-                    speech_dict['time_started'] = round(timeEnd, 3)
-                    speech_dict['length_of_recording'] = round(lengthRecording, 3)
-                    speech_dict['mean_amp'] = round(float(float(sum(ampData))/len(ampData)), 3)
-                    speech_dict['med_amp'] = round(np.median(ampData), 3)
-                    speech_dict['25_amp'] = round(np.percentile(ampData, 25), 3)                    
-                    speech_dict['75_amp'] = round(np.percentile(ampData, 75), 3)
-                    speech_dict['max_amp'] = round(np.amax(ampData), 3)
-                    speech_dict['processed'] = 0
-                    speech_labels.append(speech_dict)
-                    print "AUTO DONE"
-                else:
-                    print "MANUAL"
-                    raw_detection = v.detect_speech()
-                    #print raw_detection
-                    speech_labels = v.convert_windows_to_readible_labels(raw_detection, str(timeEnd))
-                    print "MANUAL DONE"
+                raw_detection = v.detect_speech()
+                speech_labels = v.convert_windows_to_readible_labels(raw_detection, str(timeEnd))
                 megaArray.append(speech_labels)
                 save_to_file(megaArray, soundName)
                 #print subprocess.check_output(['./reaper/REAPER/build/reaper', '-i', wavFile, '-f', foFile, '-p', pmFile, '-a'])
@@ -217,17 +188,11 @@ class processWAV(threading.Thread):
             
             except subprocess.CalledProcessError as e:
                 logging.exception("message")
-        
-        subprocess.check_output(['rm', wavFile])
         sense.clear()
         with open("processWav.txt", "w") as text_file:
             text_file.write("Total wavs processed: {}".format(str(processNum)))
         with open("createWav.txt", "w") as t2:
             t2.write("Total wavs supposed to be processed: {}".format(str(audioNum)))
-        currTime = time.time()
-        currTime = currTime - timeStart
-        with open("timeTaken.txt", "w") as t3:
-            t3.write("Time taken to process wavs: {}".format(str(currTime)))
             #if goingFlag == False and processNum >= audioNum:
              #   break
 
@@ -332,7 +297,6 @@ class movementDetector(threading.Thread):
         gap = False
         numMisses = 0
         currDay = 1
-        rawData = []
         print "Calibrating..."
         #sense.clear((255, 0, 0))
         while goingFlag:
@@ -343,9 +307,7 @@ class movementDetector(threading.Thread):
             currDay = int(((totalTime + startSeconds) / 86400) + 1)
             if tempDay != currDay:
                 movData = []
-                rawData = []
             movementName = dir_path + "/data/day" + str(currDay) + "/" + fileChar + "/movement" + str(fileNum) + ".json"
-            rawMovementName = dir_path + "/data/day" + str(currDay) + "/" + fileChar + "/rawMovement" + str(fileNum) + ".json"
             if fileChar == "A":
                 fileChar = "B"
             else:
@@ -359,11 +321,7 @@ class movementDetector(threading.Thread):
             x = round(x, 3)
             y = round(y, 3)
             z = round(z,3)
-            rawLabel = [currTime, x, y, z]
-            rawData.append(rawLabel)
-            if (len(rawData) % 10) == 0:
-                save_to_file(rawData, rawMovementName)
-                print "WrItINg tO fILe"
+
             stable = True
             for xCom in xList:
                 if x < xCom -0.015 or x > xCom + 0.015:
@@ -405,7 +363,7 @@ class movementDetector(threading.Thread):
                 print "X: " + str(meanX)
                 print "Y: " + str(meanY)
             if foundMean:
-                if (x >= meanX + 0.006 or x <= meanX -0.006) and (y >= meanY + 0.006 or y <= meanY - 0.006): #or y>= meanY + 0.009 or y <= meanY - 0.009:
+                if x >= meanX + 0.006 or x <= meanX -0.006: #or y>= meanY + 0.009 or y <= meanY - 0.009:
                     if gap == False:
                         movLabel = {}
                         print "^^^^^^^^^^^^^^^^^^^^^^^"
@@ -481,23 +439,8 @@ class lightSensor(threading.Thread):
 
             sense.show_letter("X", text_colour=[255,0,0])# back_colour=[0,255,0])
             sys.exit(1)
-
-
-class wirelessScan(threading.Thread):
-    def run(self):
-        #Wifi
-        wifi_scanner = get_scanner()
-        wifiInfo = wifi_scanner.get_access_points()
-        print wifiInfo
-        for x in range(0, len(wifiInfo)):
-            print wifiInfo[x]["bssid"]
-        
-        #Bluetooth
-        nearby_devices = discover_devices()
 #sense.show_message("Prepare for instruction...", text_colour=(255, 0, 0), back_colour=(0,0,0))
 print dir_path
-statvfs = os.statvfs('/')
-bytesLeftStart = statvfs.f_frsize * statvfs.f_bfree
 try:
 
     cat = smbus.SMBus(1)
@@ -680,36 +623,18 @@ t2 = processWAV()
 t3 = tempTaking()
 t4 = movementDetector()
 t5 = lightSensor()
-#t6 = wirelessScan()
 
 t1.start()
 t2.start()
 t3.start()
 t4.start()
 t5.start()
-#t6.start()
+
 
 for event in sense.stick.get_events():
     print ""
 
 
-statvfs = os.statvfs('/')
-bytesLeftEnd = statvfs.f_frsize * statvfs.f_bfree
-
-bytesUsed = bytesLeftStart - bytesLeftEnd
-percentBytesUsed = float(bytesUsed) / float(bytesLeftStart)
-
-memoryArray = []
-memoryDict = {}
-memoryDict['bytes__left_start'] = bytesLeftStart
-memoryDict['bytes_left_end'] = bytesLeftEnd
-memoryDict['percent_bytes_used'] = percentBytesUsed
-memoryDict['total_bytes_used'] = bytesUsed
-memoryDict['time_ran'] = timeRun
-memoryArray.append(memoryDict)
-
-memoryName = dir_path + "/data/memory" + str(fileNum) + ".json"
-save_to_file(memoryArray, memoryName)
 #print subprocess.check_output(['arecord','--duration=5','talking1.wav'])
 #my_file = "talking1.wav"
 #while os.path.exists(my_file) == False:

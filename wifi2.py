@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import wifi
+#import wifi
 from bluetooth import *
 from pythonwifi.iwlibs import Wireless
 
@@ -100,14 +100,15 @@ def Delete(ssid):
 
 if __name__ == '__main__':
     # Search WiFi and return WiFi list
-    print Search()
+    
+    #print Search()
 
     # Connect WiFi with password & without password
     #print Connect('OpenWiFi')
     #print Connect('ClosedWiFi', 'password')
     #print Connect('ATT8v8y738', '2q7=5d4u3r2a')
     # Delete WiFi from auto connect list
-    print Delete('DeleteWiFi')
+   # print Delete('DeleteWiFi')
 
     # Bluetooth
     print "\n Performing bluetooth inquiry..."
@@ -124,10 +125,10 @@ if __name__ == '__main__':
 
 
     # Channel and Rates
-    wifi = Wireless('wlan0')
-    num_frequencies, channels = wifi.getChannelInfo()
+    #wifi = Wireless('wlan0')
+    #num_frequencies, channels = wifi.getChannelInfo()
     #current_freq = wifi.getFrequency()
-    print channels
-    print num_frequencies
+    #print channels
+    #print num_frequencies
     #print channels.index(current_freq)
     #print current_freq
