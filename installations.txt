@@ -1,0 +1,54 @@
+TO SET UP NEW PI:
+	-- use Etcher to write Raspbian image to SD card
+	-- Stick in pi, plug in power source
+	-- Upon bootup, connect to wifi
+	-- (Optional) change to US keyboard - see instructions below - then reboot
+	-- In terminal: git clone https://github.com/cpickard828/superSensor.git
+	-- In terminal: cd superSensor
+	-- In terminal: ./install
+	-- In terminal: mkdir /home/pi/superSensor/data
+	-- In terminal: mkdir /home/pi/superSensor/data/day{1..31
+	-- In terminal: mkdir /home/pi/superSensor/data/day{1..31}/A
+	-- In terminal: mkdir /home/pi/superSensor/data/day{1..31}/B
+	--> In /usr/share/alsa/alsa.conf:
+		change defaults.ctl.card from 0 to 1
+		change defaults.pcm.card from 0 to 1
+	--> Edit rc.local:
+		--> "sudo vim /etc/rc.local"
+		--> add this line before exit 0:
+			sudo python /home/pi/superSensor/main.py
+	-- run "python main.py"
+
+
+Change to US Keyboard Layout:
+	sudo dpkg-reconfigre
+		--> change from en_GB.UTF-8 to en_US.UTF-8
+			---> Debatably unnecessary
+	sudo dpkg-reconfigure keyboard-configuration
+		--> Generic 104-key PC
+		--> English (US)
+	Reboot
+
+Get "arecord" to work:
+	--> "sudo vim ~/.asoundrc"
+	--> Put this line in: pcm.!default { type asym playback.pcm { type plug slave.pcm "hw:0" } capture.pcm { type plug slave.pcm "hw :1" } } 
+	--> In /usr/share/alsa/alsa.conf:
+		change defaults.ctl.card from 0 to 1
+		change defaults.pcm.card from 0 to 1
+
+For Bluetooth Low Energy:
+	--> In superSensor, run: git clone https://github.com/nccgroup/BLESuite.git
+	--> sudo apt-get install mercurial -y
+	--> sudo apt-get install libglib2.0-dev -y
+	--> sudo apt-get install libboost-all-dev -y
+	--> sudo apt-get install libbluetooth-dev -y
+	--> In ~/superSensor/BLESuite/PyGattlib, run: 
+		sudo python setup.py install
+Edit rc.local:
+	--> "sudo vim /etc/rc.local"
+	--> add this line before exit 0:
+		sudo python /home/pi/superSensor/main.py
+Enable SSH for file transfers:
+	--> "sudo raspi-config"
+	--> Interfacing Options
+	--> Enable SSH
