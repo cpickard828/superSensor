@@ -4,6 +4,7 @@ sudo mkdir /home/pi/graphs
 sudo chmod +x /home/pi/graphs
 sudo apt-get update -y
 
+sudo apt-get update -y
 sudo apt-get install vim-runtime -y
 sudo apt-get install vim -y
 
